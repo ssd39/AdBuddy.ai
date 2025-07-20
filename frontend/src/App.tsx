@@ -1,10 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import { Toaster } from "react-hot-toast";
 import { Provider as ReduxProvider } from "react-redux";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AuthenticatedLayout from "./components/AuthenticatedLayout";
-// Removed TavusCVIProvider import as we're using direct iframe embedding instead
 import { CVIProvider } from "./components/cvi/components/cvi-provider";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardPage from "./pages/DashboardPage";
@@ -13,8 +12,9 @@ import OnboardingLobbyPage from "./pages/OnboardingLobbyPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import VideoCallPage from "./pages/VideoCallPage";
 import { initializeAuth } from "./services/authService";
-import { fetchCurrentUser } from "./store/authActions";
 import { store } from "./store/store";
+
+initializeAuth();
 
 // Create a client for React Query
 const queryClient = new QueryClient();
@@ -22,25 +22,12 @@ const queryClient = new QueryClient();
 // Simple token check component - doesn't check validity
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!localStorage.getItem("authToken")) {
-    console.log("dwij: Failed to find token!");
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
 };
 
 function App() {
-  // Initialize authentication
-  useEffect(() => {
-    initializeAuth();
-
-    // Check if we have an auth token
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      // Load user data into Redux store
-      store.dispatch(fetchCurrentUser());
-    }
-  }, []);
-
   // Memoize routes to prevent unnecessary re-renders
   const routes = useMemo(
     () => (

@@ -9,6 +9,7 @@ from app.services.auth import (
     verify_otp,
     get_current_active_user
 )
+from app.db.client import get_async_supabase_client
 
 router = APIRouter()
 
@@ -67,13 +68,12 @@ async def complete_onboarding(
     """
     Complete user onboarding
     """
-    from app.db.client import get_supabase_client
     
-    supabase = get_supabase_client()
+    supabase = await get_async_supabase_client()
     
     try:
         # Update user data
-        result = supabase.table("users").update({
+        result = await supabase.table("users").update({
             "full_name": request.full_name,
             "is_onboarded": True
         }).eq("id", current_user.id).execute()

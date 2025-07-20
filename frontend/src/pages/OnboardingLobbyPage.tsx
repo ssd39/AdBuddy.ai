@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ThemeToggle from "../components/ThemeToggle";
+import { updateOnboardingState } from "../services/authService";
 import { pollConversationStatus } from "../services/tavusService";
 import toast from "../utils/toast";
-import { updateOnboardingState } from "../services/authService";
 
 // Animation variants
 const containerVariants = {
@@ -34,13 +34,13 @@ const itemVariants = {
 // Animation for the progress indicator
 const progressAnimation = {
   initial: { width: "0%" },
-  animate: { 
-    width: "100%", 
-    transition: { 
-      duration: 30, 
-      ease: "linear" 
-    }
-  }
+  animate: {
+    width: "100%",
+    transition: {
+      duration: 30,
+      ease: "linear",
+    },
+  },
 };
 
 export default function OnboardingLobbyPage() {
@@ -48,16 +48,21 @@ export default function OnboardingLobbyPage() {
   const navigate = useNavigate();
   const [isPolling, setIsPolling] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState<string>("Processing your onboarding information");
-  
+  const [statusMessage, setStatusMessage] = useState<string>(
+    "Processing your onboarding information"
+  );
+  const pollingRef = useRef(false);
+
   // Get conversation ID from location state or localStorage
   const conversationIdFromState = location.state?.conversationId;
-  const conversationIdFromStorage = localStorage.getItem("tavus_conversation_id");
+  const conversationIdFromStorage = localStorage.getItem(
+    "tavus_conversation_id"
+  );
   const conversationId = conversationIdFromState || conversationIdFromStorage;
-  
+
   // Get the status from location state (if provided)
   const statusFromState = location.state?.status;
-  
+
   // Messages to cycle through while waiting
   const statusMessages = [
     "Processing your onboarding information",
@@ -78,22 +83,20 @@ export default function OnboardingLobbyPage() {
 
     // Change status message every 6 seconds
     const messageInterval = setInterval(() => {
-      setStatusMessage(prevMessage => {
+      setStatusMessage((prevMessage) => {
         const currentIndex = statusMessages.indexOf(prevMessage);
         const nextIndex = (currentIndex + 1) % statusMessages.length;
         return statusMessages[nextIndex];
       });
     }, 6000);
 
-    // Poll for conversation status - use a ref to prevent duplicate polling
-    const pollingRef = React.useRef(false);
-    
+    // Poll for conversation status
     const checkStatus = async () => {
       // Skip if already polling
       if (pollingRef.current) return;
-      
+
       pollingRef.current = true;
-      
+
       try {
         await pollConversationStatus(
           conversationId,
@@ -105,13 +108,13 @@ export default function OnboardingLobbyPage() {
         try {
           // Update backend state
           await updateOnboardingState({
-            onboarding_state: 'completed'
+            onboarding_state: "completed",
           });
-          
+
           // Clear local storage
           localStorage.removeItem("tavus_conversation_id");
           localStorage.removeItem("tavus_conversation_url");
-          
+
           toast.success("Onboarding completed successfully!");
           navigate("/dashboard", { replace: true });
         } catch (error) {
@@ -133,7 +136,7 @@ export default function OnboardingLobbyPage() {
 
     // Simulate progress
     const progressInterval = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev) => {
         // Max progress while waiting is 90%
         return Math.min(prev + 0.5, 90);
       });
@@ -167,82 +170,75 @@ export default function OnboardingLobbyPage() {
                  rounded-xl shadow-xl border border-gray-100 dark:border-gray-700
                  backdrop-blur-md z-10 text-center"
       >
-        <motion.div
-          variants={itemVariants}
-          className="mb-8"
-        >
+        <motion.div variants={itemVariants} className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-blue-600 dark:from-blue-400 dark:to-blue-200">
-            {statusFromState === 'processing' ? 'Processing Your Information' : 'Creating Your Personalized Experience'}
+            {statusFromState === "processing"
+              ? "Processing Your Information"
+              : "Creating Your Personalized Experience"}
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            {statusFromState === 'processing' 
-              ? 'Thank you for completing the video onboarding. We\'re processing your information.'
-              : 'We\'re now crafting your tailored AdBuddy.ai experience based on your video call.'}
+            {statusFromState === "processing"
+              ? "Thank you for completing the video onboarding. We're processing your information."
+              : "We're now crafting your tailored AdBuddy.ai experience based on your video call."}
           </p>
         </motion.div>
-        
-        <motion.div
-          variants={itemVariants}
-          className="mb-8"
-        >
+
+        <motion.div variants={itemVariants} className="mb-8">
           <div className="w-32 h-32 mx-auto mb-6 relative">
             <div className="absolute inset-0 rounded-full border-4 border-gray-200 dark:border-gray-700"></div>
-            <motion.div 
+            <motion.div
               className="absolute inset-0 rounded-full border-4 border-blue-500 dark:border-blue-400"
-              style={{ 
+              style={{
                 borderTopColor: "transparent",
-                borderRightColor: "transparent"
+                borderRightColor: "transparent",
               }}
-              animate={{ 
-                rotate: 360 
+              animate={{
+                rotate: 360,
               }}
-              transition={{ 
-                duration: 1.5, 
-                repeat: Infinity, 
-                ease: "linear" 
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "linear",
               }}
             />
-            
+
             <div className="absolute inset-0 flex items-center justify-center">
-              <svg 
-                className="w-12 h-12 text-blue-500 dark:text-blue-400" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24" 
+              <svg
+                className="w-12 h-12 text-blue-500 dark:text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
             </div>
           </div>
-          
+
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-3">
             {statusMessage}
           </h2>
-          
+
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4 overflow-hidden">
-            <motion.div 
+            <motion.div
               className="h-full bg-blue-600 dark:bg-blue-500 rounded-full"
               style={{ width: `${progress}%` }}
               initial={{ width: "0%" }}
             />
           </div>
-          
+
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             This process may take a few moments. Please don't close this window.
           </p>
         </motion.div>
-        
+
         {!isPolling && (
-          <motion.div
-            variants={itemVariants}
-            className="mt-6"
-          >
+          <motion.div variants={itemVariants} className="mt-6">
             <p className="text-amber-600 dark:text-amber-400 mb-4">
               It's taking longer than expected to complete your onboarding.
             </p>
@@ -253,14 +249,16 @@ export default function OnboardingLobbyPage() {
               >
                 Go to Dashboard
               </button>
-              {statusFromState === 'processing' ? (
+              {statusFromState === "processing" ? (
                 <button
                   onClick={() => {
-                    const conversationUrl = localStorage.getItem("tavus_conversation_url");
+                    const conversationUrl = localStorage.getItem(
+                      "tavus_conversation_url"
+                    );
                     if (conversationUrl && conversationId) {
                       navigate("/onboarding/video-call", {
                         state: { conversationUrl, conversationId },
-                        replace: true
+                        replace: true,
                       });
                     } else {
                       navigate("/onboarding", { replace: true });

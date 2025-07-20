@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from app.models.user import User
 from app.services.auth import get_current_active_user
-from app.db.client import get_supabase_client
+from app.db.client import get_supabase_client, get_async_supabase_client
 from app.services.email import send_welcome_email
 from app.api.models.update_onboarding_state import UpdateOnboardingStateRequest
 
@@ -60,7 +60,7 @@ async def complete_onboarding(
     if current_user.is_onboarded:
         return current_user
     
-    supabase = get_supabase_client()
+    supabase = await get_async_supabase_client()
     
     try:
         # Update user data
@@ -69,7 +69,7 @@ async def complete_onboarding(
             "is_onboarded": True
         }
         
-        user_result = supabase.table("users").update(user_update).eq("id", current_user.id).execute()
+        user_result = await supabase.table("users").update(user_update).eq("id", current_user.id).execute()
         
         if not user_result.data or len(user_result.data) == 0:
             raise HTTPException(
@@ -85,7 +85,7 @@ async def complete_onboarding(
             "industry": data.industry
         }
         
-        supabase.table("user_profiles").insert(onboarding_data).execute()
+        await supabase.table("user_profiles").insert(onboarding_data).execute()
         
         # Send welcome email
         await send_welcome_email(current_user.email, data.full_name)
@@ -106,7 +106,7 @@ async def update_onboarding_state(
     """
     Update user's onboarding state
     """
-    supabase = get_supabase_client()
+    supabase = await get_async_supabase_client()
     
     try:
         # Create a dictionary for user_metadata updates
@@ -133,7 +133,7 @@ async def update_onboarding_state(
             user_update["is_onboarded"] = True
         
         # Update user in database
-        result = supabase.table("users").update(user_update).eq("id", current_user.id).execute()
+        result = await supabase.table("users").update(user_update).eq("id", current_user.id).execute()
         
         if not result.data or len(result.data) == 0:
             raise HTTPException(

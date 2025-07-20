@@ -74,7 +74,7 @@ const TavusEmbeddedConversation: React.FC<TavusEmbeddedConversationProps> = ({
   );
 
   return (
-    <div className="relative w-full h-full min-h-[500px]">
+    <div className="relative w-full">
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg z-10">
           <div className="text-center">
@@ -116,15 +116,18 @@ const TavusEmbeddedConversation: React.FC<TavusEmbeddedConversationProps> = ({
       )}
 
       <motion.div
-        className="w-full h-full min-h-[500px] rounded-lg border border-gray-200 dark:border-gray-700"
+        className="w-full rounded-lg border border-gray-200 dark:border-gray-700"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
+        style={{ display: "flex", flexDirection: "column" }}
       >
-        <Conversation
-          conversationUrl={conversationUrl}
-          onLeave={handleConversationEnd}
-        />
+        <div style={{ flex: 1 }}>
+          <Conversation
+            conversationUrl={conversationUrl}
+            onLeave={handleConversationEnd}
+          />
+        </div>
       </motion.div>
     </div>
   );

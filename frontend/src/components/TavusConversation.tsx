@@ -59,7 +59,7 @@ const TavusConversation: React.FC<TavusConversationProps> = ({
 
   return (
     <motion.div
-      className="w-full h-[600px] md:h-[80vh] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg"
+      className="w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}

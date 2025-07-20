@@ -70,7 +70,6 @@ export default function AuthenticatedLayout({
         });
 
         setIsLoading(false);
-        console.log(status);
         // Handle routing based on onboarding state from backend
         switch (status.onboarding_state) {
           case "not_started":

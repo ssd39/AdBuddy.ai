@@ -8,8 +8,9 @@ from jose import JWTError, jwt
 from pydantic import EmailStr
 
 from app.core.config import settings
-from app.db.client import get_supabase_client
+from app.db.client import get_async_supabase_client
 from app.models.user import Token, TokenPayload, User, UserInDB
+from app.services.email import send_otp_email_with_template
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login",
@@ -26,20 +27,19 @@ async def send_otp_email(email: EmailStr) -> Dict[str, Any]:
     """
     Send OTP via email
     """
-    from app.services.email import send_otp_email_with_template
     
     otp = generate_otp()
     # Store OTP in database or cache with expiration
     # Here we're using Supabase to store the OTP
     
-    supabase = get_supabase_client()
+    supabase = await get_async_supabase_client()
     
     # Store OTP with expiration (15 minutes)
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
     
     try:
         # Store OTP in a Supabase table
-        supabase.table("otp_codes").insert({
+        await supabase.table("otp_codes").insert({
             "email": email,
             "code": otp,
             "expires_at": expires_at.isoformat(),
@@ -59,11 +59,11 @@ async def verify_otp(email: EmailStr, otp: str) -> Dict[str, Any]:
     """
     Verify OTP code
     """
-    supabase = get_supabase_client()
+    supabase = await get_async_supabase_client()
     
     try:
         # Check if OTP is valid
-        result = supabase.table("otp_codes").select("*").eq("email", email).eq("code", otp).eq("used", False).execute()
+        result = await supabase.table("otp_codes").select("*").eq("email", email).eq("code", otp).eq("used", False).execute()
         
         if not result.data or len(result.data) == 0:
             return {"success": False, "message": "Invalid OTP"}
@@ -81,10 +81,10 @@ async def verify_otp(email: EmailStr, otp: str) -> Dict[str, Any]:
             return {"success": False, "message": "OTP expired"}
         
         # Mark OTP as used
-        supabase.table("otp_codes").update({"used": True}).eq("id", otp_record["id"]).execute()
+        await supabase.table("otp_codes").update({"used": True}).eq("id", otp_record["id"]).execute()
         
         # Get or create user
-        user_result = supabase.table("users").select("*").eq("email", email).execute()
+        user_result = await supabase.table("users").select("*").eq("email", email).execute()
         
         if not user_result.data or len(user_result.data) == 0:
             # Create new user
@@ -95,7 +95,7 @@ async def verify_otp(email: EmailStr, otp: str) -> Dict[str, Any]:
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
-            user_result = supabase.table("users").insert(user_data).execute()
+            user_result = await supabase.table("users").insert(user_data).execute()
             user = user_result.data[0]
         else:
             user = user_result.data[0]
@@ -172,8 +172,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         )
     
     # Get user from database
-    supabase = get_supabase_client()
-    result = supabase.table("users").select("*").eq("id", token_data.sub).execute()
+    supabase = await get_async_supabase_client()
+    result = await supabase.table("users").select("*").eq("id", token_data.sub).execute()
     
     if not result.data or len(result.data) == 0:
         raise HTTPException(

@@ -7,6 +7,7 @@ from app.models.user import User
 from app.services.auth import get_current_active_user
 from app.db.client import get_supabase_client, get_async_supabase_client
 from app.core.config import settings
+from app.services.transcript_processor import process_conversation_transcript
 
 router = APIRouter()
 
@@ -214,6 +215,20 @@ async def process_tavus_callback(data: TavusCallbackData) -> None:
             
             # Get user ID from the conversation
             user_id = conv_result.data[0]["user_id"]
+            
+            # Process the transcript to extract company information using OpenAI
+            try:
+                processing_result = await process_conversation_transcript(data.conversation_id, user_id)
+                print(f"Transcript processing result: {processing_result}")
+                
+                # If processing was not successful, still update onboarding state but log the error
+                if not processing_result.get("success"):
+                    print(f"Error processing transcript: {processing_result.get('error')}")
+            except Exception as e:
+                print(f"Error calling transcript processor: {str(e)}")
+                import traceback
+                print(traceback.format_exc())
+            
             # Update user's onboarding state in user_metadata
             user_result = await supabase.table("users").select("user_metadata").eq("id", user_id).execute()
             
@@ -221,17 +236,18 @@ async def process_tavus_callback(data: TavusCallbackData) -> None:
                 user_metadata = user_result.data[0].get("user_metadata", {}) or {}
                 
                 # Update metadata with conversation status
-                user_metadata["onboarding_state"] = "in_lobby"
+                user_metadata["onboarding_state"] = "completed"
                 user_metadata["conversation_id"] = data.conversation_id
                 
-                # Update the user record with the new metadata
+                # Update the user record with the new metadata and set is_onboarded to true
                 await supabase.table("users").update({
                     "user_metadata": user_metadata,
+                    "is_onboarded": True,
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }).eq("id", user_id).execute()
                 
-                print(f"Updated user {user_id} onboarding state to in_lobby")
-    
+                print(f"Updated user {user_id} onboarding state to completed and is_onboarded to true")
+
     except Exception as e:
         # Log error but don't raise exception since this is a background task
         print(f"Error processing Tavus callback: {str(e)}")
@@ -253,6 +269,25 @@ async def tavus_callback(
     background_tasks.add_task(process_tavus_callback, data)
     
     return {"status": "success"}
+
+@router.post("/process-transcript/{conversation_id}")
+async def process_transcript(
+    conversation_id: str,
+    current_user: User = Depends(get_current_active_user)
+) -> Dict[str, Any]:
+    """
+    Manually process a conversation transcript to extract company information.
+    This endpoint is for testing the transcript processing functionality.
+    """
+    try:
+        # Call the transcript processing function
+        result = await process_conversation_transcript(conversation_id, current_user.id)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing transcript: {str(e)}"
+        )
 
 @router.get("/conversation-status/{conversation_id}")
 async def get_conversation_status(

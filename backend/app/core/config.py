@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     TAVUS_REPLICA_ID: str = os.getenv("TAVUS_REPLICA_ID", "") 
     BACKEND_URL: str = os.getenv("BACKEND_URL", "http://localhost:8000")
     
+    # OpenAI
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
     

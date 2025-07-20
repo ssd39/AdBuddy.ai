@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ThemeToggle from "../components/ThemeToggle";
-import { updateOnboardingState } from "../services/authService";
 import { pollConversationStatus } from "../services/tavusService";
 import toast from "../utils/toast";
 
@@ -106,15 +105,9 @@ export default function OnboardingLobbyPage() {
 
         // Conversation is completed, update state, clear the video session ID and redirect to dashboard
         try {
-          // Update backend state
-          await updateOnboardingState({
-            onboarding_state: "completed",
-          });
-
           // Clear local storage
           localStorage.removeItem("tavus_conversation_id");
           localStorage.removeItem("tavus_conversation_url");
-
           toast.success("Onboarding completed successfully!");
           navigate("/dashboard", { replace: true });
         } catch (error) {

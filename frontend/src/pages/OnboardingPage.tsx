@@ -1,15 +1,13 @@
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import OnboardingForm from "../components/OnboardingForm";
-import VideoOnboarding from "../components/VideoOnboarding";
 import ThemeToggle from "../components/ThemeToggle";
+import VideoOnboarding from "../components/VideoOnboarding";
 import type { OnboardingData } from "../services/api";
-import { completeOnboarding } from "../services/authService";
-import toast from "../utils/toast";
-import OnboardingLobbyPage from "./OnboardingLobbyPage";
-import { useAppSelector, useAppDispatch } from "../store/hooks";
 import { completeOnboarding as completeOnboardingAction } from "../store/authActions";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import toast from "../utils/toast";
 
 // Animation variants
 const pageVariants = {
@@ -24,9 +22,9 @@ export default function OnboardingPage() {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  
+
   // Get user data from Redux store
-  const { user } = useAppSelector(state => state.auth);
+  const { user } = useAppSelector((state) => state.auth);
   const userEmail = user?.email || "";
   const userName = user?.full_name || "";
 
@@ -43,9 +41,7 @@ export default function OnboardingPage() {
         industry: formData.industry,
       };
 
-      // Use both the Redux action and the service call
       await dispatch(completeOnboardingAction(apiData));
-      await completeOnboarding(apiData);
 
       // Redirect to dashboard after successful onboarding
       navigate("/dashboard");
@@ -56,7 +52,7 @@ export default function OnboardingPage() {
       setIsLoading(false);
     }
   };
-  
+
   // Handle when a conversation is created
   const handleConversationCreated = (id: string) => {
     setConversationId(id);
@@ -86,16 +82,16 @@ export default function OnboardingPage() {
                 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700
                 backdrop-blur-md z-10"
         >
-          <VideoOnboarding 
-            email={userEmail} 
-            fullName={userName} 
-            onConversationCreated={handleConversationCreated} 
+          <VideoOnboarding
+            email={userEmail}
+            fullName={userName}
+            onConversationCreated={handleConversationCreated}
           />
         </div>
       </motion.div>
     );
   }
-  
+
   // For the form-based onboarding route
   if (location.pathname === "/onboarding/form") {
     return (
@@ -120,12 +116,21 @@ export default function OnboardingPage() {
                 backdrop-blur-md z-10"
         >
           <div className="mb-4">
-            <button 
+            <button
               onClick={() => navigate("/onboarding")}
               className="text-blue-600 dark:text-blue-400 flex items-center gap-2 hover:underline"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                  clipRule="evenodd"
+                />
               </svg>
               Back to Video Onboarding
             </button>
@@ -135,7 +140,7 @@ export default function OnboardingPage() {
       </motion.div>
     );
   }
-  
+
   // Default fallback (shouldn't happen with proper routing)
   return null;
 }

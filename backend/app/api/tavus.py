@@ -5,9 +5,11 @@ from pydantic import BaseModel, Field
 
 from app.models.user import User
 from app.services.auth import get_current_active_user
-from app.db.client import get_supabase_client, get_async_supabase_client
+from app.db.client import get_async_mongodb_db
 from app.core.config import settings
 from app.services.transcript_processor import process_conversation_transcript
+from app.services.qloo import qloo_service
+from bson.objectid import ObjectId
 
 router = APIRouter()
 
@@ -95,9 +97,9 @@ async def create_conversation(
             conversation_data = response.json()
             print(conversation_data)
             # Store the conversation in the database
-            supabase = await get_async_supabase_client()
+            db = await get_async_mongodb_db()
             
-            # First, check if tavus_conversations table exists and create it if not
+            # Prepare to store in MongoDB
             try:
                 # Prepare the conversation data
                 conversation_db_data = {
@@ -134,8 +136,8 @@ async def create_conversation(
                 print(conversation_db_data)
                 
                 # Insert the record
-                result = await supabase.table("tavus_conversations").insert(conversation_db_data).execute()
-                print("Database insert result:", result)
+                result = await db.tavus_conversations.insert_one(conversation_db_data)
+                print("Database insert result:", result.inserted_id)
                 
             except Exception as db_error:
                 # Log the error but continue execution
@@ -167,18 +169,16 @@ async def process_tavus_callback(data: TavusCallbackData) -> None:
     Process Tavus callback data in the background
     This function only stores the transcript data without any extraction logic
     """
-    supabase = await get_async_supabase_client()
+    db = await get_async_mongodb_db()
     
     try:
         print(f"Processing Tavus callback event: {data.event_type}")
         
         # Get conversation by ID
-        conv_result = await supabase.table("tavus_conversations").select("*").eq(
-            "conversation_id", data.conversation_id
-        ).execute()
+        conversation = await db.tavus_conversations.find_one({"conversation_id": data.conversation_id})
         
         # If conversation not found, log and return
-        if not conv_result.data or len(conv_result.data) == 0:
+        if not conversation:
             print(f"No conversation found with ID: {data.conversation_id}")
             return
             
@@ -197,24 +197,27 @@ async def process_tavus_callback(data: TavusCallbackData) -> None:
             
             # Update conversation with transcript
             update_data = {
-                "status": "completed",
-                "completed_at": datetime.now(timezone.utc).isoformat(),
-                "transcript": full_transcript,
-                "metadata": {"transcript_structured": transcript_json},
-                "event_type": data.event_type,
-                "webhook_url": data.webhook_url,
-                "is_processed": True
+                "$set": {
+                    "status": "completed",
+                    "completed_at": datetime.now(timezone.utc),
+                    "transcript": full_transcript,
+                    "metadata": {"transcript_structured": transcript_json},
+                    "event_type": data.event_type,
+                    "webhook_url": data.webhook_url,
+                    "is_processed": True
+                }
             }
             
             # Update the database
-            result = await supabase.table("tavus_conversations").update(update_data).eq(
-                "conversation_id", data.conversation_id
-            ).execute()
+            result = await db.tavus_conversations.update_one(
+                {"conversation_id": data.conversation_id},
+                update_data
+            )
             
             print(f"Updated conversation {data.conversation_id} with transcript")
             
             # Get user ID from the conversation
-            user_id = conv_result.data[0]["user_id"]
+            user_id = conversation["user_id"]
             
             # Process the transcript to extract company information using OpenAI
             try:
@@ -228,23 +231,69 @@ async def process_tavus_callback(data: TavusCallbackData) -> None:
                 print(f"Error calling transcript processor: {str(e)}")
                 import traceback
                 print(traceback.format_exc())
+
+            # Convert user_id to ObjectId if needed
+            mongo_user_id = user_id
+            if len(user_id) == 24:
+                try:
+                    mongo_user_id = ObjectId(user_id)
+                except:
+                    pass
             
-            # Update user's onboarding state in user_metadata
-            user_result = await supabase.table("users").select("user_metadata").eq("id", user_id).execute()
+            user_result = await db.users.find_one({"_id": mongo_user_id}, {"user_metadata": 1})
             
-            if user_result.data and len(user_result.data) > 0:
-                user_metadata = user_result.data[0].get("user_metadata", {}) or {}
+            if user_result:
+                user_metadata = user_result.get("user_metadata", {}) or {}
+                
+                # Get similar companies before completing onboarding
+                try:
+                    
+                    company_name = user_metadata.get("company_name", "")
+                    company_details = user_metadata.get("company_details", "")
+                    
+                    if company_name:
+                        # Get similar companies using the QLoo service
+                        similar_companies = await qloo_service.get_similar_companies_from_metadata(
+                            company_metadata={
+                                "company_name": company_name,
+                                "company_details": company_details or ""
+                            }
+                        )
+                        
+                        # Store competitors in the database
+                        if similar_companies:
+                            competitor_entry = {
+                                "user_id": mongo_user_id,
+                                "competitors_data": similar_companies,
+                                "source": "qloo",
+                                "created_at": datetime.now(timezone.utc),
+                                "updated_at": datetime.now(timezone.utc)
+                            }
+                            
+                            # Insert competitor entry
+                            await db.competitors.insert_one(competitor_entry)
+                            print(f"Stored competitors data with {len(similar_companies)} companies for user {user_id}")
+                                
+                except Exception as e:
+                    print(f"Error getting or storing similar companies: {str(e)}")
+                    import traceback
+                    print(traceback.format_exc())
                 
                 # Update metadata with conversation status
                 user_metadata["onboarding_state"] = "completed"
                 user_metadata["conversation_id"] = data.conversation_id
                 
                 # Update the user record with the new metadata and set is_onboarded to true
-                await supabase.table("users").update({
-                    "user_metadata": user_metadata,
-                    "is_onboarded": True,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }).eq("id", user_id).execute()
+                await db.users.update_one(
+                    {"_id": mongo_user_id},
+                    {
+                        "$set": {
+                            "user_metadata": user_metadata,
+                            "is_onboarded": True,
+                            "updated_at": datetime.now(timezone.utc)
+                        }
+                    }
+                )
                 
                 print(f"Updated user {user_id} onboarding state to completed and is_onboarded to true")
 
@@ -297,21 +346,20 @@ async def get_conversation_status(
     """
     Get the status of a Tavus conversation
     """
-    supabase = await get_async_supabase_client()
+    db = await get_async_mongodb_db()
     
     try:
-        # Query by conversation_id
-        result = await supabase.table("tavus_conversations").select("*").eq(
-            "conversation_id", conversation_id
-        ).eq("user_id", current_user.id).execute()
-        
-        if not result.data or len(result.data) == 0:
+        print(f"Checking status for conversation_id: {conversation_id}")        
+        # Try to find the conversation just by conversation_id first (more reliable)
+        conversation = await db.tavus_conversations.find_one({
+            "conversation_id": conversation_id
+        })
+
+        if not conversation:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Conversation not found"
             )
-        
-        conversation = result.data[0]
         
         return {
             "conversation_id": conversation["conversation_id"],

@@ -2,10 +2,11 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from bson.objectid import ObjectId
 
 from app.models.user import User
 from app.services.auth import get_current_active_user
-from app.db.client import get_supabase_client, get_async_supabase_client
+from app.db.client import get_async_mongodb_db
 from app.services.email import send_welcome_email
 from app.api.models.update_onboarding_state import UpdateOnboardingStateRequest
 
@@ -49,55 +50,6 @@ async def get_onboarding_status(current_user: User = Depends(get_current_active_
     
     return response
 
-@router.post("/complete", response_model=User)
-async def complete_onboarding(
-    data: OnboardingData,
-    current_user: User = Depends(get_current_active_user)
-) -> Any:
-    """
-    Complete user onboarding process
-    """
-    if current_user.is_onboarded:
-        return current_user
-    
-    supabase = await get_async_supabase_client()
-    
-    try:
-        # Update user data
-        user_update = {
-            "full_name": data.full_name,
-            "is_onboarded": True
-        }
-        
-        user_result = await supabase.table("users").update(user_update).eq("id", current_user.id).execute()
-        
-        if not user_result.data or len(user_result.data) == 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to update user data"
-            )
-        
-        # Store additional onboarding data
-        onboarding_data = {
-            "user_id": current_user.id,
-            "company_name": data.company_name,
-            "role": data.role,
-            "industry": data.industry
-        }
-        
-        await supabase.table("user_profiles").insert(onboarding_data).execute()
-        
-        # Send welcome email
-        await send_welcome_email(current_user.email, data.full_name)
-        
-        updated_user = User(**user_result.data[0])
-        return updated_user
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-
 @router.post("/state")
 async def update_onboarding_state(
     data: UpdateOnboardingStateRequest,
@@ -106,7 +58,7 @@ async def update_onboarding_state(
     """
     Update user's onboarding state
     """
-    supabase = await get_async_supabase_client()
+    db = await get_async_mongodb_db()
     
     try:
         # Create a dictionary for user_metadata updates
@@ -125,17 +77,22 @@ async def update_onboarding_state(
         
         # Update the user record
         user_update = {
-            "user_metadata": user_metadata
+            "$set": {
+                "user_metadata": user_metadata
+            }
         }
         
         # If state is completed, also update is_onboarded flag
         if data.onboarding_state == "completed":
-            user_update["is_onboarded"] = True
-        
+            user_update["$set"]["is_onboarded"] = True
+
+        user_id = current_user.id
+        mongo_user_id = ObjectId(user_id)
+
         # Update user in database
-        result = await supabase.table("users").update(user_update).eq("id", current_user.id).execute()
+        result = await db.users.update_one({"_id": mongo_user_id}, user_update)
         
-        if not result.data or len(result.data) == 0:
+        if result.matched_count == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to update user data"

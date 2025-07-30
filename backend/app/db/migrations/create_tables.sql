@@ -19,18 +19,6 @@ CREATE TABLE IF NOT EXISTS otp_codes (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create user_profiles table for onboarding data
-CREATE TABLE IF NOT EXISTS user_profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    company_name TEXT,
-    role TEXT,
-    industry TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_otp_codes_email ON otp_codes(email);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles(user_id);

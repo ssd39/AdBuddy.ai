@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import ThemeToggle from "../components/ThemeToggle";
 import TavusConversation from "../components/TavusConversation";
 import toast from "../utils/toast";
 
@@ -19,7 +18,9 @@ export default function VideoCallPage() {
 
   // Get conversation details from location state or localStorage
   const conversationUrl = location.state?.conversationUrl;
-  const conversationId = location.state?.conversationId || localStorage.getItem("tavus_conversation_id");
+  const conversationId =
+    location.state?.conversationId ||
+    localStorage.getItem("tavus_conversation_id");
 
   useEffect(() => {
     // Redirect if no conversation URL is provided
@@ -49,10 +50,6 @@ export default function VideoCallPage() {
       <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-blue-200/40 to-blue-300/30 rounded-full blur-3xl transform translate-x-1/4 -translate-y-1/4 dark:from-blue-800/40 dark:to-blue-700/30"></div>
       <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-gradient-to-tr from-gray-200/30 to-blue-300/20 rounded-full blur-3xl transform -translate-x-1/4 translate-y-1/4 dark:from-blue-900/40 dark:to-blue-800/30"></div>
 
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle />
-      </div>
-
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center">
           <h1 className="text-2xl md:text-3xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-blue-600 dark:from-blue-400 dark:to-blue-200">
@@ -65,10 +62,16 @@ export default function VideoCallPage() {
                 <div className="text-center">
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 1,
+                      ease: "linear",
+                    }}
                     className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"
                   />
-                  <p className="text-gray-700 dark:text-gray-300">Preparing your video call...</p>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    Preparing your video call...
+                  </p>
                 </div>
               </div>
             ) : (
@@ -81,8 +84,9 @@ export default function VideoCallPage() {
 
           <div className="mt-6 text-center">
             <p className="text-gray-600 dark:text-gray-400 max-w-lg mx-auto">
-              Speak clearly and answer the questions to complete your onboarding. 
-              Your responses will help us customize AdBuddy.ai to your specific needs.
+              Speak clearly and answer the questions to complete your
+              onboarding. Your responses will help us customize AdBuddy.ai to
+              your specific needs.
             </p>
           </div>
         </div>

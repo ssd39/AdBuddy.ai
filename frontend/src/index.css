@@ -12,16 +12,11 @@
   }
 
   body {
-    @apply bg-gradient-to-b from-white to-gray-50 text-gray-900 transition-colors duration-300 ease-in-out min-h-screen;
-  }
-
-  .dark {
+    @apply bg-gradient-to-b from-gray-950 to-gray-900 text-neutral-200 min-h-screen;
     color-scheme: dark;
   }
   
-  .dark body {
-    @apply bg-gradient-to-b from-gray-950 to-gray-900 text-gray-100 min-h-screen;
-  }
+  /* Background gradient classes are defined in the tailwind config */
   
   /* Button styling with gradients */
   button, [type='button'], [type='reset'], [type='submit'] {
@@ -31,10 +26,10 @@
   /* Primary button */
   .btn-primary {
     @apply bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700
-           focus:ring-blue-500 transform hover:-translate-y-0.5;
+           focus:ring-blue-400 transform hover:-translate-y-0.5;
   }
   
-  .dark .btn-primary {
+  .btn-primary {
     @apply bg-blue-600 hover:bg-blue-700 focus:ring-blue-400;
   }
   
@@ -44,7 +39,7 @@
            focus:ring-gray-300 transform hover:-translate-y-0.5;
   }
   
-  .dark .btn-secondary {
+  .btn-secondary {
     @apply bg-gray-700 text-gray-200 hover:bg-gray-600 focus:ring-gray-500;
   }
 
@@ -65,8 +60,8 @@
     @apply transition-all duration-200 rounded-lg focus:ring focus:ring-blue-500/30 focus:border-blue-500;
   }
 
-  .dark input, .dark select, .dark textarea {
-    @apply focus:ring-blue-400/30 focus:border-blue-400;
+  input, select, textarea {
+    @apply focus:ring-blue-400/30 focus:border-blue-400 bg-gray-800 text-neutral-200 border-gray-700;
   }
 
   /* Custom scrollbar for light/dark mode */
@@ -75,29 +70,29 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-800;
+    @apply bg-gray-800;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-blue-400 dark:bg-blue-700 rounded-full;
+    @apply bg-blue-700 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-blue-500 dark:bg-blue-600;
+    @apply bg-blue-600;
   }
 
   /* Card styling class */
   .card {
-    @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100/70 dark:border-gray-700/70 p-6;
+    @apply bg-gray-800 rounded-xl shadow-lg border border-gray-700/70 p-6;
   }
 
   /* Text gradient class */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-blue-600 dark:from-blue-400 dark:to-blue-200;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-blue-200;
   }
   
   /* Background blur class */
   .bg-blur {
-    @apply backdrop-blur-md bg-white/80 dark:bg-gray-800/80;
+    @apply backdrop-blur-md bg-gray-800/80;
   }
 }

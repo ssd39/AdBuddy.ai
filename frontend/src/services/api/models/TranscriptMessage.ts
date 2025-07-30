@@ -3,12 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Onboarding data model
+ * Model for a single message in a transcript
  */
-export type OnboardingData = {
-    full_name: string;
-    company_name: string;
+export type TranscriptMessage = {
     role: string;
-    industry: string;
+    content: string;
 };
 

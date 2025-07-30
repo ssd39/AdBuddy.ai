@@ -2,19 +2,16 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { TavusCallbackProperties } from './TavusCallbackProperties';
 /**
- * Tavus callback data model based on Tavus API documentation
+ * Tavus callback data model based on Tavus webhooks documentation
  */
 export type TavusCallbackData = {
     conversation_id: string;
-    status: string;
-    metadata?: Record<string, any>;
-    transcript?: (string | null);
-    recorded_at?: (string | null);
-    duration_seconds?: (number | null);
-    completion_url?: (string | null);
-    conversation_name?: (string | null);
-    persona_id?: (string | null);
-    replica_id?: (string | null);
+    webhook_url: string;
+    event_type: string;
+    message_type: string;
+    timestamp: string;
+    properties?: (TavusCallbackProperties | null);
 };
 

@@ -4,7 +4,6 @@ import { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "../components/LoginForm";
 import OTPVerificationForm from "../components/OTPVerificationForm";
-import ThemeToggle from "../components/ThemeToggle";
 import {
   getOnboardingStatus,
   sendOTP,
@@ -127,10 +126,6 @@ export default function LoginPage() {
           },
         }}
       />
-
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle />
-      </div>
 
       <motion.div
         variants={cardVariants}

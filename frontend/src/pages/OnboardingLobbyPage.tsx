@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import ThemeToggle from "../components/ThemeToggle";
 import { pollConversationStatus } from "../services/tavusService";
 import toast from "../utils/toast";
 
@@ -23,7 +22,7 @@ const itemVariants = {
     y: 0,
     opacity: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 300,
       damping: 24,
     },
@@ -153,10 +152,6 @@ export default function OnboardingLobbyPage() {
       <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-blue-200/40 to-blue-300/30 rounded-full blur-3xl transform translate-x-1/4 -translate-y-1/4 dark:from-blue-800/40 dark:to-blue-700/30"></div>
       <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-gradient-to-tr from-gray-200/30 to-blue-300/20 rounded-full blur-3xl transform -translate-x-1/4 translate-y-1/4 dark:from-blue-900/40 dark:to-blue-800/30"></div>
 
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle />
-      </div>
-
       <motion.div
         variants={itemVariants}
         className="w-full max-w-xl p-6 sm:p-10 bg-white/95 dark:bg-gray-800/95 
@@ -230,48 +225,7 @@ export default function OnboardingLobbyPage() {
           </p>
         </motion.div>
 
-        {!isPolling && (
-          <motion.div variants={itemVariants} className="mt-6">
-            <p className="text-amber-600 dark:text-amber-400 mb-4">
-              It's taking longer than expected to complete your onboarding.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Go to Dashboard
-              </button>
-              {statusFromState === "processing" ? (
-                <button
-                  onClick={() => {
-                    const conversationUrl = localStorage.getItem(
-                      "tavus_conversation_url"
-                    );
-                    if (conversationUrl && conversationId) {
-                      navigate("/onboarding/video-call", {
-                        state: { conversationUrl, conversationId },
-                        replace: true,
-                      });
-                    } else {
-                      navigate("/onboarding", { replace: true });
-                    }
-                  }}
-                  className="px-4 py-2 border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                >
-                  Return to Video Call
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate("/onboarding", { replace: true })}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Try Again
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
+        {/* No error message or buttons needed here */}
       </motion.div>
     </motion.div>
   );

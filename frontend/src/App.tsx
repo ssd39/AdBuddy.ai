@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 import OnboardingLobbyPage from "./pages/OnboardingLobbyPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import VideoCallPage from "./pages/VideoCallPage";
+import CompetitorsPage from "./pages/CompetitorsPage";
 import { initializeAuth } from "./services/authService";
 import { store } from "./store/store";
 
@@ -49,17 +50,6 @@ function App() {
         />
 
         <Route
-          path="/onboarding/form"
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout>
-                <OnboardingPage />
-              </AuthenticatedLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
           path="/onboarding/lobby"
           element={
             <ProtectedRoute>
@@ -87,6 +77,17 @@ function App() {
             <ProtectedRoute>
               <AuthenticatedLayout>
                 <DashboardPage />
+              </AuthenticatedLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/competitors"
+          element={
+            <ProtectedRoute>
+              <AuthenticatedLayout>
+                <CompetitorsPage />
               </AuthenticatedLayout>
             </ProtectedRoute>
           }

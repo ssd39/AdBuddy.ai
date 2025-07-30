@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 from pydantic import EmailStr
 
 from app.core.config import settings
-from app.db.client import get_async_supabase_client
+from app.db.client import get_async_mongodb_db
 from app.models.user import Token, TokenPayload, User, UserInDB
 from app.services.email import send_otp_email_with_template
 
@@ -30,21 +30,22 @@ async def send_otp_email(email: EmailStr) -> Dict[str, Any]:
     
     otp = generate_otp()
     # Store OTP in database or cache with expiration
-    # Here we're using Supabase to store the OTP
+    # Here we're using MongoDB to store the OTP
     
-    supabase = await get_async_supabase_client()
+    db = await get_async_mongodb_db()
     
     # Store OTP with expiration (15 minutes)
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
     
     try:
-        # Store OTP in a Supabase table
-        await supabase.table("otp_codes").insert({
+        # Store OTP in MongoDB collection
+        await db.otp_codes.insert_one({
             "email": email,
             "code": otp,
-            "expires_at": expires_at.isoformat(),
-            "used": False
-        }).execute()
+            "expires_at": expires_at,
+            "used": False,
+            "created_at": datetime.now(timezone.utc)
+        })
         
         # Send email with OTP using our email service
         email_result = await send_otp_email_with_template(email, otp)
@@ -59,55 +60,69 @@ async def verify_otp(email: EmailStr, otp: str) -> Dict[str, Any]:
     """
     Verify OTP code
     """
-    supabase = await get_async_supabase_client()
+    db = await get_async_mongodb_db()
     
     try:
         # Check if OTP is valid
-        result = await supabase.table("otp_codes").select("*").eq("email", email).eq("code", otp).eq("used", False).execute()
+        otp_record = await db.otp_codes.find_one({
+            "email": email,
+            "code": otp,
+            "used": False
+        })
         
-        if not result.data or len(result.data) == 0:
+        if not otp_record:
             return {"success": False, "message": "Invalid OTP"}
         
-        otp_record = result.data[0]
-        expires_at = datetime.fromisoformat(otp_record["expires_at"])
+        expires_at = otp_record["expires_at"]
         
         # Check if OTP is expired
         current_time = datetime.now(timezone.utc)
-        # Ensure expires_at has timezone info if it doesn't already
-        if not hasattr(expires_at, 'tzinfo') or expires_at.tzinfo is None:
+        
+        # Ensure expires_at is timezone-aware
+        if not expires_at.tzinfo:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
             
         if current_time > expires_at:
             return {"success": False, "message": "OTP expired"}
         
         # Mark OTP as used
-        await supabase.table("otp_codes").update({"used": True}).eq("id", otp_record["id"]).execute()
+        await db.otp_codes.update_one({"_id": otp_record["_id"]}, {"$set": {"used": True}})
         
         # Get or create user
-        user_result = await supabase.table("users").select("*").eq("email", email).execute()
+        user = await db.users.find_one({"email": email})
         
-        if not user_result.data or len(user_result.data) == 0:
-            # Create new user
+        if not user:
+            # Create new user with MongoDB ObjectId
+            from bson.objectid import ObjectId
+            user_id = ObjectId()
             user_data = {
+                "_id": user_id,
                 "email": email,
                 "is_active": True,
                 "is_onboarded": False,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat()
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             }
-            user_result = await supabase.table("users").insert(user_data).execute()
-            user = user_result.data[0]
-        else:
-            user = user_result.data[0]
+            await db.users.insert_one(user_data)
+            user = user_data
         
-        # Create access token
-        access_token = create_access_token(subject=user["id"])
+        # Create access token with string ID
+        user_id_str = str(user["_id"]) if "_id" in user else user["id"] if "id" in user else None
+        if not user_id_str:
+            return {"success": False, "message": "User ID not found"}
+            
+        access_token = create_access_token(subject=user_id_str)
+        
+        # Prepare user for response by converting _id to id string for compatibility with models
+        user_copy = dict(user)
+        if "_id" in user_copy:
+            user_copy["id"] = str(user_copy.pop("_id"))
         
         return {
             "success": True, 
             "access_token": access_token,
             "token_type": "bearer",
-            "user": user
+            "user": user_copy
         }
     except Exception as e:
         return {"success": False, "message": str(e)}
@@ -172,16 +187,27 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         )
     
     # Get user from database
-    supabase = await get_async_supabase_client()
-    result = await supabase.table("users").select("*").eq("id", token_data.sub).execute()
+    db = await get_async_mongodb_db()
+    from bson.objectid import ObjectId
     
-    if not result.data or len(result.data) == 0:
+    # Convert string ID to ObjectId if needed
+    user_id = token_data.sub
+    if len(user_id) == 24:  # It's likely a hex string that can be converted to ObjectId
+        try:
+            user_id = ObjectId(user_id)
+        except:
+            pass
+    
+    user_data = await db.users.find_one({"_id": user_id})
+    
+    if not user_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
     
-    user_data = result.data[0]
+    # Convert MongoDB _id to string for compatibility
+    user_data["id"] = str(user_data.pop("_id"))
     return User(**user_data)
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:

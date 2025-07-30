@@ -52,6 +52,29 @@ export class TavusService {
         });
     }
     /**
+     * Process Transcript
+     * Manually process a conversation transcript to extract company information.
+     * This endpoint is for testing the transcript processing functionality.
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static processTranscriptApiV1TavusProcessTranscriptConversationIdPost({
+        conversationId,
+    }: {
+        conversationId: string,
+    }): CancelablePromise<Record<string, any>> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/tavus/process-transcript/{conversation_id}',
+            path: {
+                'conversation_id': conversationId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * Get Conversation Status
      * Get the status of a Tavus conversation
      * @returns any Successful Response

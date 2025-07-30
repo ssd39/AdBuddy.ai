@@ -1,4 +1,5 @@
 from typing import Any
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import EmailStr
@@ -9,7 +10,7 @@ from app.services.auth import (
     verify_otp,
     get_current_active_user
 )
-from app.db.client import get_async_supabase_client
+from app.db.client import get_async_mongodb_db
 
 router = APIRouter()
 
@@ -69,22 +70,45 @@ async def complete_onboarding(
     Complete user onboarding
     """
     
-    supabase = await get_async_supabase_client()
+    db = await get_async_mongodb_db()
     
     try:
-        # Update user data
-        result = await supabase.table("users").update({
-            "full_name": request.full_name,
-            "is_onboarded": True
-        }).eq("id", current_user.id).execute()
+        # Convert id to ObjectId if needed
+        from bson.objectid import ObjectId
+        user_id = current_user.id
+        if len(user_id) == 24:
+            try:
+                user_id = ObjectId(user_id)
+            except:
+                pass
         
-        if not result.data or len(result.data) == 0:
+        # Update user data
+        result = await db.users.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "full_name": request.full_name,
+                "is_onboarded": True,
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        if result.matched_count == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to update user data"
             )
         
-        return User(**result.data[0])
+        # Get updated user
+        updated_user = await db.users.find_one({"_id": user_id})
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to retrieve updated user data"
+            )
+        
+        # Convert MongoDB _id to string for compatibility
+        updated_user["id"] = str(updated_user.pop("_id"))
+        return User(**updated_user)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

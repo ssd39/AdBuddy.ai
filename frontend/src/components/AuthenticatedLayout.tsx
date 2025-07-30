@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { getOnboardingStatus } from "../services/authService";
 import { fetchCurrentUser } from "../store/authActions";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
+import Sidebar from "./Sidebar";
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
@@ -31,6 +32,11 @@ export default function AuthenticatedLayout({
 
   // Store pathname in a ref to prevent unnecessary API calls
   const previousPathnameRef = React.useRef(location.pathname);
+
+  // Determine if we should show the sidebar (only for completed onboarding and non-onboarding routes)
+  const shouldShowSidebar =
+    !location.pathname.startsWith("/onboarding") &&
+    onboardingStatus.is_onboarded;
 
   useEffect(() => {
     // Check if token exists
@@ -133,11 +139,32 @@ export default function AuthenticatedLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-light-gradient dark:bg-dark-gradient">
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
+  // If we're showing the sidebar, render the layout with sidebar
+  if (shouldShowSidebar) {
+    return (
+      <div className="flex h-screen overflow-hidden relative">
+        {/* Background with dark mode */}
+        <div className="absolute inset-0 bg-gray-900 -z-10"></div>
+
+        {/* Sidebar */}
+        <div className="w-64 flex-shrink-0 z-10">
+          <Sidebar />
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 overflow-hidden z-10">
+          <main className="h-full overflow-hidden">{children}</main>
+        </div>
+      </div>
+    );
+  }
+
+  // Otherwise, render just the children (for onboarding pages, etc.)
   return <>{children}</>;
 }

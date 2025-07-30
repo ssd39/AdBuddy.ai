@@ -2,9 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { OnboardingData } from '../models/OnboardingData';
 import type { UpdateOnboardingStateRequest } from '../models/UpdateOnboardingStateRequest';
-import type { User } from '../models/User';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -19,27 +17,6 @@ export class OnboardingService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/onboarding/status',
-        });
-    }
-    /**
-     * Complete Onboarding
-     * Complete user onboarding process
-     * @returns User Successful Response
-     * @throws ApiError
-     */
-    public static completeOnboardingApiV1OnboardingCompletePost({
-        requestBody,
-    }: {
-        requestBody: OnboardingData,
-    }): CancelablePromise<User> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/onboarding/complete',
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: `Validation Error`,
-            },
         });
     }
     /**

@@ -8,7 +8,8 @@ import json
 import logging
 from pydantic import BaseModel, Field
 
-from app.db.client import get_async_supabase_client
+from app.db.client import get_async_mongodb_db
+from bson.objectid import ObjectId
 from app.core.config import settings
 
 # LangChain imports
@@ -32,18 +33,19 @@ async def process_conversation_transcript(conversation_id: str, user_id: str) ->
     """
     try:
         # 1. Fetch the transcript from the database
-        supabase = await get_async_supabase_client()
+        db = await get_async_mongodb_db()
+        mongo_user_id = ObjectId(user_id)
+  
         
         logger.info(f"Fetching transcript for conversation_id: {conversation_id}, user_id: {user_id}")
-        result = await supabase.table("tavus_conversations").select("*").eq(
-            "conversation_id", conversation_id
-        ).eq("user_id", user_id).execute()
+        conversation = await db.tavus_conversations.find_one({
+            "conversation_id": conversation_id,
+            "user_id": mongo_user_id
+        })
         
-        if not result.data or len(result.data) == 0:
+        if not conversation:
             logger.error(f"No conversation found with ID: {conversation_id} for user_id: {user_id}")
             return {"success": False, "error": "Conversation not found"}
-        
-        conversation = result.data[0]
         
         # Check if we have transcript data
         if not conversation.get("transcript"):
@@ -57,32 +59,37 @@ async def process_conversation_transcript(conversation_id: str, user_id: str) ->
             logger.warning(f"Failed to extract company name from transcript for conversation_id: {conversation_id}")
         
         # 4. Update user metadata with the extracted information
-        user_result = await supabase.table("users").select("user_metadata").eq("id", user_id).execute()
+        user_result = await db.users.find_one({"_id": mongo_user_id}, {"user_metadata": 1})
         
-        if not user_result.data or len(user_result.data) == 0:
+        if not user_result:
             logger.error(f"User not found with ID: {user_id}")
             return {"success": False, "error": "User not found"}
         
         # Get existing metadata or initialize empty dict
-        user_metadata = user_result.data[0].get("user_metadata", {}) or {}
+        user_metadata = user_result.get("user_metadata", {}) or {}
         
         # Update metadata with company information
         user_metadata["company_name"] = company_name
         user_metadata["company_details"] = company_details
-        user_metadata["transcript_processed_at"] = datetime.now(timezone.utc).isoformat()
+        user_metadata["transcript_processed_at"] = datetime.now(timezone.utc)
         user_metadata["processed_conversation_id"] = conversation_id
         
         # Update the user record
-        await supabase.table("users").update({
-            "user_metadata": user_metadata,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }).eq("id", user_id).execute()
+        await db.users.update_one(
+            {"_id": mongo_user_id},
+            {
+                "$set": {
+                    "user_metadata": user_metadata,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
         
         # 5. Mark conversation as processed
-        await supabase.table("tavus_conversations").update({
-            "is_processed": True
-            # Remove updated_at as it doesn't exist in the schema
-        }).eq("conversation_id", conversation_id).execute()
+        await db.tavus_conversations.update_one(
+            {"conversation_id": conversation_id},
+            {"$set": {"is_processed": True}}
+        )
         
         logger.info(f"Successfully processed transcript for conversation_id: {conversation_id}")
         

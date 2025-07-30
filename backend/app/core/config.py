@@ -27,10 +27,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     
-    # Supabase
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
-    SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
+    # MongoDB
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+    MONGODB_DATABASE: str = os.getenv("MONGODB_DATABASE", "adbuddy")
     
     # Tavus
     TAVUS_API_KEY: str = os.getenv("TAVUS_API_KEY", "")
@@ -41,6 +40,19 @@ class Settings(BaseSettings):
     # OpenAI
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     
+    # QLoo API
+    QLOO_API_BASE_URL: str = os.getenv("QLOO_API_BASE_URL", "https://hackathon.api.qloo.com")
+    QLOO_API_KEY: str = os.getenv("QLOO_API_KEY", "")
+    
+    # Here Maps API
+    HERE_API_KEY: str = os.getenv("HERE_API_KEY", "")
+    
+    # Meta Ads Library API
+    META_ADS_API_BASE_URL: str = os.getenv("META_ADS_API_BASE_URL", "https://graph.facebook.com/v19.0")
+    META_ADS_API_TOKEN: str = os.getenv("META_ADS_API_TOKEN", "")
+
+    TRACE_LOOP_API_KEY: str =  os.getenv("TRACE_LOOP_API_KEY", "")
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
     

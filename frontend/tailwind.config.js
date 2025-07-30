@@ -134,12 +134,6 @@ export default {
           backdropFilter: "blur(12px) saturate(180%)",
           border: "1px solid rgba(55, 65, 81, 0.3)",
         },
-        ".bg-light-gradient": {
-          background: "linear-gradient(to right bottom, #ffffff, #f8fafc, #f1f5fb, #ebf1fa, #e5ecfa)",
-        },
-        ".bg-dark-gradient": {
-          background: "linear-gradient(to right bottom, #0f172a, #111827, #131525, #151323, #161320)",
-        },
       });
     },
   ],

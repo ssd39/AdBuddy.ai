@@ -53,6 +53,9 @@ class Settings(BaseSettings):
 
     TRACE_LOOP_API_KEY: str =  os.getenv("TRACE_LOOP_API_KEY", "")
 
+    # Resend
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
     

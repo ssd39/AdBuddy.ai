@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api import auth, onboarding, tavus, competitors
+from app.api import auth, onboarding, tavus, competitors, dashboard, openai, campaign
 
 router = APIRouter()
 
@@ -14,6 +14,15 @@ router.include_router(tavus.router, prefix="/tavus", tags=["tavus"])
 
 # Include competitors router
 router.include_router(competitors.router, prefix="/competitors", tags=["competitors"])
+
+# Include dashboard router
+router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+
+# Include OpenAI router
+router.include_router(openai.router, prefix="/openai", tags=["openai"])
+
+# Include Campaign router
+router.include_router(campaign.router, prefix="/campaigns", tags=["campaigns"])
 
 # Basic health check endpoint
 @router.get("/health")

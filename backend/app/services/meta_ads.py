@@ -21,9 +21,8 @@ class MetaAdsService:
         self, 
         company_name: str, 
         limit: int = 10,
-        ad_type: str = "POLITICAL_AND_ISSUE_ADS",
+        ad_type: str = "ALL",  # Changed from POLITICAL_AND_ISSUE_ADS to ALL for general brand ads
         ad_active_status: str = "ALL",
-        search_page_ids: bool = True,
         fields: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
@@ -34,7 +33,6 @@ class MetaAdsService:
             limit: Maximum number of results to return
             ad_type: Type of ads to search for
             ad_active_status: Filter by ad status (ALL, ACTIVE, INACTIVE)
-            search_page_ids: Whether to search by page IDs
             fields: Fields to include in the response
             
         Returns:
@@ -48,33 +46,31 @@ class MetaAdsService:
                 fields = [
                     "id", 
                     "ad_creation_time", 
-                    "ad_creative_bodies", 
-                    "ad_creative_link_captions", 
-                    "ad_creative_link_descriptions",
-                    "ad_creative_link_titles",
+                  
                     "ad_delivery_start_time",
                     "ad_delivery_stop_time",
                     "ad_snapshot_url",
                     "currency",
-                    "funding_entity",
                     "page_name",
                     "page_id",
                     "impressions",
                     "spend"
                 ]
             
+            # Add required parameters including ad_reached_countries
             params = {
                 "access_token": self.api_token,
                 "search_terms": company_name,
                 "ad_type": ad_type,
                 "ad_active_status": ad_active_status,
-                "search_page_ids": search_page_ids,
+                "ad_reached_countries": "US", # Required parameter - using US as default
                 "fields": ",".join(fields),
                 "limit": limit
             }
             
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, headers=self.headers, params=params)
+                print(response.json())
                 response.raise_for_status()
                 
                 data = response.json()
@@ -87,7 +83,7 @@ class MetaAdsService:
         self,
         page_id: str,
         limit: int = 10,
-        ad_type: str = "POLITICAL_AND_ISSUE_ADS",
+        ad_type: str = "ALL",  # Changed from POLITICAL_AND_ISSUE_ADS to ALL for general brand ads
         ad_active_status: str = "ALL",
         fields: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
@@ -131,6 +127,7 @@ class MetaAdsService:
                 "search_page_ids": page_id,
                 "ad_type": ad_type,
                 "ad_active_status": ad_active_status,
+                "ad_reached_countries": "US", # Required parameter - using US as default
                 "fields": ",".join(fields),
                 "limit": limit
             }

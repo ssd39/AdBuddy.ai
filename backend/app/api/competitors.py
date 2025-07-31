@@ -46,10 +46,18 @@ async def test_qloo_service():
             "error_type": type(e).__name__
         }
 
+class PaginationInfo(BaseModel):
+    """Pagination information for API responses"""
+    page: int
+    page_size: int
+    total_count: int
+    total_pages: int
+
 class CompetitorResponse(BaseModel):
     """Response model for competitors data"""
     competitors: List[Dict[str, Any]]
     query_parameters: Dict[str, Any]
+    pagination: PaginationInfo
     source: str = "qloo"  # Indicates where the data came from
 
 class CompetitorAdsResponse(BaseModel):
@@ -60,7 +68,8 @@ class CompetitorAdsResponse(BaseModel):
 
 @router.get("/similar-companies", response_model=CompetitorResponse)
 async def get_similar_companies(
-    limit: int = 10,
+    page: int = 1,
+    page_size: int = 9,
     current_user: User = Depends(get_current_active_user)
 ) -> CompetitorResponse:
     """
@@ -91,51 +100,73 @@ async def get_similar_companies(
 
     db = await get_async_mongodb_db()
     
-    # Convert string ID to MongoDB ObjectId
     user_id = current_user.id
-    mongo_user_id = ObjectId(user_id)
+
 
     comp_result = await db.competitors.find_one(
-        {"user_id": mongo_user_id},
+        {"user_id": user_id},
         {"competitors_data": 1, "_id": 0},
         sort=[("created_at", -1)]
     )
     
     if not comp_result:
-        # If no stored data found, return empty list
+        # If no stored data found, return empty list with pagination info
         return CompetitorResponse(
             competitors=[],
+            pagination=PaginationInfo(
+                page=1,
+                page_size=page_size,
+                total_count=0,
+                total_pages=0
+            ),
             query_parameters={
                 "company_name": company_name,
-                "limit": limit
+                "page": 1,
+                "page_size": page_size
             }
         )
     
     # Get stored similar companies
-    similar_companies = comp_result["competitors_data"]
+    all_similar_companies = comp_result["competitors_data"]
     
-    # Apply limit parameter
-    if limit and limit < len(similar_companies):
-        similar_companies = similar_companies[:limit]
+    # Sort companies by popularity/match score in descending order (highest match first)
+    all_similar_companies.sort(key=lambda x: x.get("popularity", 0), reverse=True)
+    
+    total_count = len(all_similar_companies)
+    
+    # Calculate pagination info
+    total_pages = (total_count + page_size - 1) // page_size  # Ceiling division
+    page = max(1, min(page, total_pages))  # Ensure page is within valid range
+    
+    # Get the paginated slice of competitors
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    paginated_companies = all_similar_companies[start_idx:end_idx]
     
     # Return the results
     return CompetitorResponse(
-        competitors=similar_companies,
+        competitors=paginated_companies,
+        pagination=PaginationInfo(
+            page=page,
+            page_size=page_size,
+            total_count=total_count,
+            total_pages=total_pages
+        ),
         query_parameters={
             "company_name": company_name,
-            "limit": limit
+            "page": page,
+            "page_size": page_size
         }
     )
 
 @router.get("/competitor-ads", response_model=CompetitorAdsResponse)
 async def get_competitor_ads(
+    company_name: str,
     limit: int = 20,
-    ads_per_competitor: int = 5,
-    company_ids: Optional[str] = None,
     current_user: User = Depends(get_current_active_user)
 ) -> CompetitorAdsResponse:
     """
-    Get ads from competitors based on either specified company IDs or automatically found similar companies
+    Get ads from a specific competitor by company name
     """
     # Check if user is onboarded
     if not current_user.is_onboarded:
@@ -144,56 +175,17 @@ async def get_competitor_ads(
             detail="User not onboarded yet. Please complete onboarding first."
         )
     
-    # Check if user_metadata exists
-    if not current_user.user_metadata or not isinstance(current_user.user_metadata, dict):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User metadata not available. Please complete onboarding first."
-        )
+    # Search for ads directly by company name
+    ads = await meta_ads_service.search_ads_by_company_name(company_name, limit=limit)
     
-    # Extract company metadata
-    company_name = current_user.user_metadata.get("company_name")
-    company_details = current_user.user_metadata.get("company_details")
-    
-    if not company_name:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Company name not found in user metadata. Please complete onboarding first."
-        )
-    
-    # Strategy 1: If company_ids are provided, use them
-    if company_ids:
-        company_id_list = company_ids.split(',')
-        competitor_entities = []
-        
-        # Get details for each company ID
-        for company_id in company_id_list:
-            company_details = await qloo_service.get_entity_details([company_id])
-            if company_details:
-                competitor_entities.extend(company_details)
-    else:
-        # Strategy 2: Use QLoo to find similar companies
-        competitor_entities = await qloo_service.get_similar_companies_from_metadata(
-            company_metadata={
-                "company_name": company_name,
-                "company_details": company_details or ""
-            },
-            limit=10  # Get a reasonable number of competitors
-        )
-    
-    # Get ads for these competitors
-    competitor_ads = await meta_ads_service.get_company_ads_from_qloo_entities(
-        qloo_entities=competitor_entities,
-        limit_per_entity=ads_per_competitor,
-        total_limit=limit
-    )
+    # Format the response
+    competitor_ads = {company_name: ads}
     
     # Return the results
     return CompetitorAdsResponse(
         competitor_ads=competitor_ads,
         query_parameters={
             "company_name": company_name,
-            "limit": limit,
-            "ads_per_competitor": ads_per_competitor
+            "limit": limit
         }
     )

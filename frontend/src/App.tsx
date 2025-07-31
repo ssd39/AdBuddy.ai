@@ -6,12 +6,14 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AuthenticatedLayout from "./components/AuthenticatedLayout";
 import { CVIProvider } from "./components/cvi/components/cvi-provider";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import CampaignDetailsPage from "./pages/CampaignDetailsPage";
+import CompetitorsPage from "./pages/CompetitorsPage";
+import CreateCampaignPage from "./pages/CreateCampaignPage";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import OnboardingLobbyPage from "./pages/OnboardingLobbyPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import VideoCallPage from "./pages/VideoCallPage";
-import CompetitorsPage from "./pages/CompetitorsPage";
 import { initializeAuth } from "./services/authService";
 import { store } from "./store/store";
 
@@ -88,6 +90,28 @@ function App() {
             <ProtectedRoute>
               <AuthenticatedLayout>
                 <CompetitorsPage />
+              </AuthenticatedLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/create-campaign"
+          element={
+            <ProtectedRoute>
+              <AuthenticatedLayout>
+                <CreateCampaignPage />
+              </AuthenticatedLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/campaigns/:id"
+          element={
+            <ProtectedRoute>
+              <AuthenticatedLayout>
+                <CampaignDetailsPage />
               </AuthenticatedLayout>
             </ProtectedRoute>
           }

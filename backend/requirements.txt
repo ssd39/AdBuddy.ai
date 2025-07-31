@@ -18,3 +18,4 @@ langchain-openai>=0.0.1
 langgraph>=0.0.19
 pydantic-settings
 pydantic[email]
+resend>=0.7.0

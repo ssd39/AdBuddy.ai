@@ -5,6 +5,8 @@ from Tavus conversation transcripts using LangChain and OpenAI GPT-4.1
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timezone
 import json
+import asyncio
+from enum import Enum
 import logging
 from pydantic import BaseModel, Field
 
@@ -34,13 +36,13 @@ async def process_conversation_transcript(conversation_id: str, user_id: str) ->
     try:
         # 1. Fetch the transcript from the database
         db = await get_async_mongodb_db()
-        mongo_user_id = ObjectId(user_id)
+        mongo_user_id = user_id
   
         
         logger.info(f"Fetching transcript for conversation_id: {conversation_id}, user_id: {user_id}")
+
         conversation = await db.tavus_conversations.find_one({
-            "conversation_id": conversation_id,
-            "user_id": mongo_user_id
+            "conversation_id": conversation_id
         })
         
         if not conversation:
@@ -59,7 +61,7 @@ async def process_conversation_transcript(conversation_id: str, user_id: str) ->
             logger.warning(f"Failed to extract company name from transcript for conversation_id: {conversation_id}")
         
         # 4. Update user metadata with the extracted information
-        user_result = await db.users.find_one({"_id": mongo_user_id}, {"user_metadata": 1})
+        user_result = await db.users.find_one({"_id": ObjectId(mongo_user_id)}, {"user_metadata": 1})
         
         if not user_result:
             logger.error(f"User not found with ID: {user_id}")
@@ -76,7 +78,7 @@ async def process_conversation_transcript(conversation_id: str, user_id: str) ->
         
         # Update the user record
         await db.users.update_one(
-            {"_id": mongo_user_id},
+            {"_id": ObjectId(mongo_user_id)},
             {
                 "$set": {
                     "user_metadata": user_metadata,

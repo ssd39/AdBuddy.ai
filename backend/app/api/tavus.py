@@ -10,8 +10,67 @@ from app.core.config import settings
 from app.services.transcript_processor import process_conversation_transcript
 from app.services.qloo import qloo_service
 from bson.objectid import ObjectId
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from typing import Dict, List, Any
 
 router = APIRouter()
+
+async def find_and_store_similar_companies(db: AsyncIOMotorDatabase, user_id: str, user_metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Find and store similar companies for a user based on their company information
+    
+    Args:
+        db: MongoDB database connection
+        user_id: User ID as string
+        user_metadata: User metadata containing company information
+        
+    Returns:
+        Dictionary with results information
+    """
+    try:
+        company_name = user_metadata.get("company_name", "")
+        company_details = user_metadata.get("company_details", "")
+        
+        if not company_name:
+            print(f"No company name found in metadata for user {user_id}")
+            return {"success": False, "message": "No company information available"}
+        
+        # Get similar companies using the QLoo service
+        similar_companies = await qloo_service.get_similar_companies_from_metadata(
+            company_metadata={
+                "company_name": company_name,
+                "company_details": company_details or ""
+            }
+        )
+        
+        # Store competitors in the database
+        if similar_companies:
+            competitor_entry = {
+                "user_id": user_id,
+                "competitors_data": similar_companies,
+                "source": "qloo",
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+            
+            # Insert competitor entry
+            result = await db.competitors.insert_one(competitor_entry)
+            print(f"Stored competitors data with {len(similar_companies)} companies for user {user_id}")
+            
+            return {
+                "success": True, 
+                "count": len(similar_companies),
+                "insert_id": str(result.inserted_id)
+            }
+        else:
+            print(f"No similar companies found for {company_name}")
+            return {"success": False, "message": "No similar companies found"}
+                
+    except Exception as e:
+        print(f"Error finding and storing similar companies: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return {"success": False, "error": str(e)}
 
 class CreateConversationRequest(BaseModel):
     """Request model for creating a Tavus conversation"""
@@ -232,52 +291,14 @@ async def process_tavus_callback(data: TavusCallbackData) -> None:
                 import traceback
                 print(traceback.format_exc())
 
-            # Convert user_id to ObjectId if needed
-            mongo_user_id = user_id
-            if len(user_id) == 24:
-                try:
-                    mongo_user_id = ObjectId(user_id)
-                except:
-                    pass
-            
-            user_result = await db.users.find_one({"_id": mongo_user_id}, {"user_metadata": 1})
+            obj_user_id = ObjectId(user_id)
+            user_result = await db.users.find_one({"_id": obj_user_id}, {"user_metadata": 1})
             
             if user_result:
                 user_metadata = user_result.get("user_metadata", {}) or {}
                 
-                # Get similar companies before completing onboarding
-                try:
-                    
-                    company_name = user_metadata.get("company_name", "")
-                    company_details = user_metadata.get("company_details", "")
-                    
-                    if company_name:
-                        # Get similar companies using the QLoo service
-                        similar_companies = await qloo_service.get_similar_companies_from_metadata(
-                            company_metadata={
-                                "company_name": company_name,
-                                "company_details": company_details or ""
-                            }
-                        )
-                        
-                        # Store competitors in the database
-                        if similar_companies:
-                            competitor_entry = {
-                                "user_id": mongo_user_id,
-                                "competitors_data": similar_companies,
-                                "source": "qloo",
-                                "created_at": datetime.now(timezone.utc),
-                                "updated_at": datetime.now(timezone.utc)
-                            }
-                            
-                            # Insert competitor entry
-                            await db.competitors.insert_one(competitor_entry)
-                            print(f"Stored competitors data with {len(similar_companies)} companies for user {user_id}")
-                                
-                except Exception as e:
-                    print(f"Error getting or storing similar companies: {str(e)}")
-                    import traceback
-                    print(traceback.format_exc())
+                # Find and store similar companies based on user metadata
+                await find_and_store_similar_companies(db, user_id, user_metadata)
                 
                 # Update metadata with conversation status
                 user_metadata["onboarding_state"] = "completed"
@@ -285,7 +306,7 @@ async def process_tavus_callback(data: TavusCallbackData) -> None:
                 
                 # Update the user record with the new metadata and set is_onboarded to true
                 await db.users.update_one(
-                    {"_id": mongo_user_id},
+                    {"_id": obj_user_id},
                     {
                         "$set": {
                             "user_metadata": user_metadata,

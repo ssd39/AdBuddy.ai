@@ -9,21 +9,36 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class CompetitorsService {
     /**
+     * Test Qloo Service
+     * Test endpoint for QlooService - does not require authentication
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static testQlooServiceApiV1CompetitorsTestGet(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/competitors/test',
+        });
+    }
+    /**
      * Get Similar Companies
-     * Get similar companies based on the user's company details stored in user_metadata
+     * Get similar companies based on the pre-stored competitors data from onboarding
      * @returns CompetitorResponse Successful Response
      * @throws ApiError
      */
     public static getSimilarCompaniesApiV1CompetitorsSimilarCompaniesGet({
-        limit = 10,
+        page = 1,
+        pageSize = 9,
     }: {
-        limit?: number,
+        page?: number,
+        pageSize?: number,
     }): CancelablePromise<CompetitorResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/competitors/similar-companies',
             query: {
-                'limit': limit,
+                'page': page,
+                'page_size': pageSize,
             },
             errors: {
                 422: `Validation Error`,
@@ -32,26 +47,23 @@ export class CompetitorsService {
     }
     /**
      * Get Competitor Ads
-     * Get ads from competitors based on either specified company IDs or automatically found similar companies
+     * Get ads from a specific competitor by company name
      * @returns CompetitorAdsResponse Successful Response
      * @throws ApiError
      */
     public static getCompetitorAdsApiV1CompetitorsCompetitorAdsGet({
+        companyName,
         limit = 20,
-        adsPerCompetitor = 5,
-        companyIds,
     }: {
+        companyName: string,
         limit?: number,
-        adsPerCompetitor?: number,
-        companyIds?: (string | null),
     }): CancelablePromise<CompetitorAdsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/competitors/competitor-ads',
             query: {
+                'company_name': companyName,
                 'limit': limit,
-                'ads_per_competitor': adsPerCompetitor,
-                'company_ids': companyIds,
             },
             errors: {
                 422: `Validation Error`,

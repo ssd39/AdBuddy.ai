@@ -429,7 +429,7 @@ class QlooParameterSet(BaseModel):
         default=None
     )
     
-    def to_api_params(self) -> Dict[str, str]:
+    def to_api_params(self) -> Dict[str, Any]:
         """Convert to QLoo API parameters"""
         params = {}
         
@@ -438,6 +438,9 @@ class QlooParameterSet(BaseModel):
             if value is not None:
                 if is_list and isinstance(value, list):
                     params[api_name] = ",".join(str(x) for x in value)
+                elif isinstance(value, bool):
+                    # Handle boolean values properly
+                    params[api_name] = value
                 else:
                     params[api_name] = str(value)
         

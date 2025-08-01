@@ -19,4 +19,4 @@ langgraph>=0.0.19
 pydantic-settings
 pydantic[email]
 resend>=0.7.0
-traceloop
+traceloop-sdk

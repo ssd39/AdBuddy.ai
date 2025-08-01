@@ -55,7 +55,7 @@
     @apply font-sans font-bold tracking-tight;
   }
 
-  /* Form inputs with better styling */
+  /* Form inputs with better stylingx */
   input, select, textarea {
     @apply transition-all duration-200 rounded-lg focus:ring focus:ring-blue-500/30 focus:border-blue-500;
   }

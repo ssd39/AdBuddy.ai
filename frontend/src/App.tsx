@@ -6,10 +6,12 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AuthenticatedLayout from "./components/AuthenticatedLayout";
 import { CVIProvider } from "./components/cvi/components/cvi-provider";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import AICallPage from "./pages/AICallPage";
 import CampaignDetailsPage from "./pages/CampaignDetailsPage";
 import CompetitorsPage from "./pages/CompetitorsPage";
 import CreateCampaignPage from "./pages/CreateCampaignPage";
 import DashboardPage from "./pages/DashboardPage";
+import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import OnboardingLobbyPage from "./pages/OnboardingLobbyPage";
 import OnboardingPage from "./pages/OnboardingPage";
@@ -36,6 +38,7 @@ function App() {
     () => (
       <Routes>
         {/* Public routes */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
 
         {/* Protected routes */}
@@ -68,6 +71,17 @@ function App() {
             <ProtectedRoute>
               <AuthenticatedLayout>
                 <VideoCallPage />
+              </AuthenticatedLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/onboarding/ai-call"
+          element={
+            <ProtectedRoute>
+              <AuthenticatedLayout>
+                <AICallPage />
               </AuthenticatedLayout>
             </ProtectedRoute>
           }
@@ -118,7 +132,7 @@ function App() {
         />
 
         {/* Default redirect */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     ),
     []

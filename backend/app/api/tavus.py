@@ -280,7 +280,7 @@ async def process_tavus_callback(data: TavusCallbackData) -> None:
             
             # Process the transcript to extract company information using OpenAI
             try:
-                processing_result = await process_conversation_transcript(data.conversation_id, user_id)
+                processing_result = await process_conversation_transcript(user_id=user_id, conversation_id=data.conversation_id)
                 print(f"Transcript processing result: {processing_result}")
                 
                 # If processing was not successful, still update onboarding state but log the error

@@ -34,8 +34,8 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     
     # Get company details from user metadata
     user_metadata = current_user.user_metadata or {}
-    company_name = user_metadata.get("company_name", current_user.full_name)
-    company_details = user_metadata.get("company_details", "")
+    company_name = user_metadata.get("company_name") or current_user.full_name or "Unnamed Company"
+    company_details = user_metadata.get("company_details") or ""
     
     return {
         "campaign_count": campaign_count,

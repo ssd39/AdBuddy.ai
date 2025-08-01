@@ -135,6 +135,50 @@ export async function getOnboardingStatus() {
   }
 }
 
+/**
+ * Polls the onboarding status until the user is onboarded
+ * @param interval The polling interval in milliseconds (default: 5000)
+ * @param maxAttempts Maximum number of polling attempts (default: 120 - 10 minutes)
+ * @returns Promise that resolves when the user is fully onboarded
+ */
+export function pollOnboardingStatus(
+  interval = 5000,
+  maxAttempts = 4000
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const status = await getOnboardingStatus();
+
+        // Check if user is onboarded
+        if (status.is_onboarded) {
+          // User is fully onboarded
+          resolve(status);
+          return;
+        }
+
+        attempts++;
+
+        if (attempts >= maxAttempts) {
+          // Exceeded maximum attempts
+          reject(new Error("Onboarding status polling timed out"));
+          return;
+        }
+
+        // Schedule next poll
+        setTimeout(poll, interval);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    // Start polling
+    poll();
+  });
+}
+
 // Complete onboarding
 export async function completeOnboarding(data: OnboardingData): Promise<User> {
   try {

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { pollOnboardingStatus } from "../services/authService";
 import { pollConversationStatus } from "../services/tavusService";
 import toast from "../utils/toast";
 
@@ -52,11 +53,12 @@ export default function OnboardingLobbyPage() {
   const pollingRef = useRef(false);
 
   // Get conversation ID from location state or localStorage
+  // Check both Tavus and OpenAI session IDs
   const conversationIdFromState = location.state?.conversationId;
-  const conversationIdFromStorage = localStorage.getItem(
-    "tavus_conversation_id"
-  );
-  const conversationId = conversationIdFromState || conversationIdFromStorage;
+  const tavusConversationId = localStorage.getItem("tavus_conversation_id");
+  const openaiSessionId = localStorage.getItem("openai_session_id");
+  const conversationId =
+    conversationIdFromState || tavusConversationId || openaiSessionId;
 
   // Get the status from location state (if provided)
   const statusFromState = location.state?.status;
@@ -88,7 +90,7 @@ export default function OnboardingLobbyPage() {
       });
     }, 6000);
 
-    // Poll for conversation status
+    // Poll for onboarding status
     const checkStatus = async () => {
       // Skip if already polling
       if (pollingRef.current) return;
@@ -96,26 +98,41 @@ export default function OnboardingLobbyPage() {
       pollingRef.current = true;
 
       try {
-        await pollConversationStatus(
-          conversationId,
-          5000, // Check every 5 seconds
-          120 // Max 10 minutes (600 seconds) of polling
-        );
-
-        // Conversation is completed, update state, clear the video session ID and redirect to dashboard
+        // First, check if the conversation is completed
         try {
-          // Clear local storage
+          await pollConversationStatus(
+            conversationId,
+            5000, // Check every 5 seconds
+            120 // Max 10 minutes (600 seconds) of polling
+          );
+
+          // Conversation is completed, now wait for user to be fully onboarded
+          console.log(
+            "Conversation completed, waiting for onboarding to complete..."
+          );
+        } catch (error) {
+          console.error("Error polling conversation status:", error);
+          // Continue anyway since we'll check onboarding status
+        }
+
+        // Now poll for the user's onboarding status
+        await pollOnboardingStatus(5000);
+
+        // User is fully onboarded, clean up and redirect to dashboard
+        try {
+          // Clear local storage - both Tavus and OpenAI related items
           localStorage.removeItem("tavus_conversation_id");
           localStorage.removeItem("tavus_conversation_url");
+          localStorage.removeItem("openai_session_id");
           toast.success("Onboarding completed successfully!");
           navigate("/dashboard", { replace: true });
         } catch (error) {
-          console.error("Error updating onboarding state:", error);
-          // Still navigate to dashboard even if update fails
+          console.error("Error cleaning up after onboarding:", error);
+          // Still navigate to dashboard even if cleanup fails
           navigate("/dashboard", { replace: true });
         }
       } catch (error) {
-        console.error("Error polling conversation status:", error);
+        console.error("Error polling onboarding status:", error);
         setIsPolling(false);
         toast.error("Could not verify onboarding status");
       } finally {
@@ -166,8 +183,8 @@ export default function OnboardingLobbyPage() {
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
             {statusFromState === "processing"
-              ? "Thank you for completing the video onboarding. We're processing your information."
-              : "We're now crafting your tailored AdBuddy.ai experience based on your video call."}
+              ? "Thank you for completing the onboarding. We're processing your information."
+              : "We're now crafting your tailored AdBuddy.ai experience based on your conversation."}
           </p>
         </motion.div>
 

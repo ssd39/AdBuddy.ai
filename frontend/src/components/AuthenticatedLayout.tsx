@@ -19,7 +19,12 @@ export default function AuthenticatedLayout({
   const [isLoading, setIsLoading] = useState(true);
   const [onboardingStatus, setOnboardingStatus] = useState<{
     is_onboarded: boolean;
-    onboarding_state: "not_started" | "video_call" | "in_lobby" | "completed";
+    onboarding_state:
+      | "not_started"
+      | "video_call"
+      | "ai_call"
+      | "in_lobby"
+      | "completed";
     conversation_id?: string;
   }>({ is_onboarded: false, onboarding_state: "not_started" });
 
@@ -99,7 +104,14 @@ export default function AuthenticatedLayout({
               });
             }
             break;
-
+          case "ai_call":
+            if (location.pathname !== "/onboarding/ai-call") {
+              navigate("/onboarding/ai-call", {
+                state: {},
+                replace: true,
+              });
+            }
+            break;
           case "in_lobby":
             // If not in the lobby page, redirect there
             if (location.pathname !== "/onboarding/lobby") {

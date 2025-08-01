@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import OpenAIOnboarding from "../components/OpenAIOnboarding";
 import VideoOnboarding from "../components/VideoOnboarding";
+import { SettingsService } from "../services/api";
+import { AppSettings } from "../services/api/models/AppSettings";
 import { useAppSelector } from "../store/hooks";
 
 // Animation variants
@@ -12,11 +15,26 @@ const pageVariants = {
 
 export default function OnboardingPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
 
   // Get user data from Redux store
   const { user } = useAppSelector((state) => state.auth);
   const userEmail = user?.email || "";
   const userName = user?.full_name || "";
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const appSettings =
+          await SettingsService.getAppSettingsApiV1SettingsSettingsGet();
+        setSettings(appSettings);
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   // Handle when a conversation is created
   const handleConversationCreated = (id: string) => {
@@ -41,11 +59,15 @@ export default function OnboardingPage() {
                 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700
                 backdrop-blur-md z-10"
       >
-        <VideoOnboarding
-          email={userEmail}
-          fullName={userName}
-          onConversationCreated={handleConversationCreated}
-        />
+        {settings?.onboarding_provider === "tavus" ? (
+          <VideoOnboarding
+            email={userEmail}
+            fullName={userName}
+            onConversationCreated={handleConversationCreated}
+          />
+        ) : (
+          <OpenAIOnboarding />
+        )}
       </div>
     </motion.div>
   );

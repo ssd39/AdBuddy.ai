@@ -22,40 +22,47 @@ from pydantic import BaseModel, Field  # Use Pydantic directly
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def process_conversation_transcript(conversation_id: str, user_id: str) -> Dict[str, Any]:
+async def process_conversation_transcript(
+    user_id: str,
+    conversation_id: Optional[str] = None,
+    transcript: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Process a conversation transcript to extract company information.
     
     Args:
-        conversation_id: The ID of the conversation to process
         user_id: The ID of the user who owns the conversation
+        conversation_id: The ID of the conversation to process (for Tavus)
+        transcript: The raw transcript string (for OpenAI)
         
     Returns:
         A dictionary containing the processing results
     """
     try:
-        # 1. Fetch the transcript from the database
         db = await get_async_mongodb_db()
         mongo_user_id = user_id
-  
-        
-        logger.info(f"Fetching transcript for conversation_id: {conversation_id}, user_id: {user_id}")
 
-        conversation = await db.tavus_conversations.find_one({
-            "conversation_id": conversation_id
-        })
-        
-        if not conversation:
-            logger.error(f"No conversation found with ID: {conversation_id} for user_id: {user_id}")
-            return {"success": False, "error": "Conversation not found"}
-        
-        # Check if we have transcript data
-        if not conversation.get("transcript"):
-            logger.error(f"No transcript found for conversation_id: {conversation_id}")
-            return {"success": False, "error": "No transcript data available"}
-        # Get transcript, ensuring it's clean of problematic characters
-        transcript = conversation.get("transcript", "")
-        company_name, company_details = await extract_company_info_from_transcript(transcript)
+        if transcript:
+            logger.info(f"Processing raw transcript for user_id: {user_id}")
+            company_name, company_details = await extract_company_info_from_transcript(transcript)
+        elif conversation_id:
+            logger.info(f"Fetching transcript for conversation_id: {conversation_id}, user_id: {user_id}")
+            conversation = await db.tavus_conversations.find_one({
+                "conversation_id": conversation_id
+            })
+            
+            if not conversation:
+                logger.error(f"No conversation found with ID: {conversation_id} for user_id: {user_id}")
+                return {"success": False, "error": "Conversation not found"}
+            
+            if not conversation.get("transcript"):
+                logger.error(f"No transcript found for conversation_id: {conversation_id}")
+                return {"success": False, "error": "No transcript data available"}
+            
+            transcript = conversation.get("transcript", "")
+            company_name, company_details = await extract_company_info_from_transcript(transcript)
+        else:
+            return {"success": False, "error": "Either conversation_id or transcript must be provided"}
         
         if not company_name:
             logger.warning(f"Failed to extract company name from transcript for conversation_id: {conversation_id}")
@@ -87,13 +94,15 @@ async def process_conversation_transcript(conversation_id: str, user_id: str) ->
             }
         )
         
-        # 5. Mark conversation as processed
-        await db.tavus_conversations.update_one(
-            {"conversation_id": conversation_id},
-            {"$set": {"is_processed": True}}
-        )
-        
-        logger.info(f"Successfully processed transcript for conversation_id: {conversation_id}")
+        # 5. Mark conversation as processed if it came from Tavus
+        if conversation_id:
+            await db.tavus_conversations.update_one(
+                {"conversation_id": conversation_id},
+                {"$set": {"is_processed": True}}
+            )
+            logger.info(f"Successfully processed transcript for conversation_id: {conversation_id}")
+        else:
+            logger.info(f"Successfully processed raw transcript for user_id: {user_id}")
         
         return {
             "success": True,

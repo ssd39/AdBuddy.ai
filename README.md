@@ -2,12 +2,6 @@
 
 AdBuddy.ai is a powerful platform designed to help businesses create, manage, and optimize their advertising campaigns across various social media platforms. By leveraging AI and data-driven insights, AdBuddy.ai simplifies the complex process of ad creation, enabling users to launch effective campaigns with ease.
 
-## About The Project
-
-AdBuddy.ai is an advanced, full-stack advertising platform that empowers businesses to create, manage, and optimize their ad campaigns on major social media networks. By leveraging artificial intelligence and data-driven insights, AdBuddy.ai streamlines the ad creation process, enabling users to launch highly effective campaigns with minimal effort.
-
-The platform features a modern and intuitive frontend built with React, Vite, and TypeScript, providing a seamless user experience. The backend is powered by a high-performance FastAPI server, which includes two sophisticated LangGraph-based agents for campaign generation and data analysis.
-
 ### Key Features:
 
 - **AI-Powered Campaign Generation:** Utilizes LangChain and OpenAI's GPT-4 to generate complete ad campaigns from user conversations and company data.
@@ -102,22 +96,6 @@ graph TD
       - **Audience Resolvers:** Similarly, it calls the Qloo `/v2/audiences/types` API and uses an LLM to pick the best audience IDs from the response.
       - **Location Resolvers:** It calls the Here Maps Geocoding API to convert a location name (e.g., "San Francisco, CA") into precise latitude and longitude coordinates.
     - **Output:** The final, fully-resolved `QlooParameterSet` ready for the insights API call.
-
-## Frontend
-
-The frontend of AdBuddy.ai is a modern single-page application (SPA) built with React, Vite, and TypeScript. It uses Tailwind CSS for styling and React Router for navigation. The application is designed to provide a seamless and intuitive user experience for creating and managing ad campaigns.
-
-### Key Components:
-
-- **`AuthenticatedLayout`:** A higher-order component that wraps all protected routes, ensuring that only authenticated users can access them. It typically includes the main navigation, sidebar, and other common UI elements.
-- **`Sidebar`:** The main navigation component, providing links to the dashboard, competitors page, campaign creation, and other key areas of the application.
-- **`ConversationArea`:** A component that facilitates the conversation between the user and the AI, capturing the input needed for campaign generation.
-- **`Onboarding` components:** A set of components (`OnboardingPage`, `OnboardingLobbyPage`, `VideoCallPage`, `AICallPage`) that guide the user through the initial setup and data collection process.
-- **Page Components:** Each page in the application (e.g., `DashboardPage`, `CampaignDetailsPage`, `CreateCampaignPage`) is a dedicated component responsible for rendering the main content of that page.
-
-### Routing:
-
-The application uses React Router for managing navigation. The main `App.tsx` file defines the application's routes, including public routes (e.g., `/login`, `/`) and protected routes that require authentication. The `ProtectedRoute` component ensures that unauthenticated users are redirected to the login page.
 
 ## Project Structure
 
